@@ -9,7 +9,6 @@ app.use(express.json())
 
 
 
-
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ntnzcww.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -26,6 +25,19 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
+      
+    const database = client.db("inventory");
+    const shopCollection = database.collection("shop");
+
+    // insert a shop to database
+    app.post('/shop', async(req,res) =>{
+        const shopItem = req.body;
+        const result = await shopCollection.insertOne(shopItem)
+        res.send(result)
+    })
+    
+
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
