@@ -28,12 +28,29 @@ async function run() {
       
     const database = client.db("inventory");
     const shopCollection = database.collection("shop");
+    const productCollection = database.collection("product");
 
     // insert a shop to database
     app.post('/shop', async(req,res) =>{
         const shopItem = req.body;
         const result = await shopCollection.insertOne(shopItem)
         res.send(result)
+    })
+
+    // get the shop from a user
+    app.get('/shop', async(req,res) =>{
+     const email = req.query.email;
+     const query = {email: email}
+      const cursor = shopCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result)
+    })
+
+    // insert product to database
+    app.post('/product', async(req,res) =>{
+      const productItem = req.body;
+      const result = await productCollection.insertOne(productItem)
+      res.send(result)
     })
     
 
