@@ -9,7 +9,7 @@ app.use(express.json())
 
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ntnzcww.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -49,10 +49,89 @@ async function run() {
     // insert product to database
     app.post('/product', async(req,res) =>{
       const productItem = req.body;
-      const result = await productCollection.insertOne(productItem)
+      const userEmail = req.body.email;
+      const userProductLimit = 3;
+      const userProductCount = await productCollection.countDocuments({email: userEmail})
+      if(userProductCount < userProductLimit){
+        const result = await productCollection.insertOne(productItem)
+        res.send(result)
+      }
+      else{
+        return res.status(403).send({err0r: "user Product limit exceeded"})
+      }
+    })
+
+    // get the product from database
+    app.get('/product', async(req,res) =>{
+      const email = req.query.email;
+      const query = {email: email};
+      const product = await productCollection.estimatedDocumentCount()
+      // console.log(product)
+      const cursor = productCollection.find(query);
+      const result = await cursor.toArray();
       res.send(result)
     })
+
+    // delete cart item
+app.delete('/product/:id',async(req,res) =>{
+    const id =req.params.id;
+    const query ={_id: new ObjectId(id)}
+    const result = await productCollection.deleteOne(query);
+    res.send(result)
+})
     
+// update a product
+app.get('/product/:id', async(req,res) =>{
+  const id = req.params.id;
+  const query = {_id: new ObjectId(id)}
+  const result = await productCollection.findOne(query);
+  res.send(result);
+})
+app.patch('/product/:id', async(req,res) =>{
+  const item = req.body;
+  const id = req.params.id;
+  const filter = {_id: new ObjectId(id)}
+  const updatedDoc ={
+    $set: {
+      productName: item.productName,
+      photo: item.photo,
+      quantity: item.quantity,
+      location: item.location,
+      productCost: item.productCost,
+      profit: item.profit,
+      discount: item.discount,
+      info: item.info
+    }
+   
+  }
+  const result = await productCollection.updateOne(filter,updatedDoc)
+  res.send(result)
+})
+
+
+// update item
+// app.get('/menu/:id', async(req,res) =>{
+//   const id = req.params.id;
+//   const query ={ _id: new ObjectId(id)}
+//   const result = await menuCollection.findOne(query)
+//   res.send(result)
+// })
+
+// app.patch('/menu/:id', async(req,res) =>{
+//   const item = req.body;
+//   const id = req.params.id;
+//   const filter = {_id: new ObjectId(id)}
+//   const updatedDoc ={
+//     $set: {
+//       name: item.name,
+//       category: item.category,
+//       price: item.recipe,
+//       image: item.image
+//     }
+//   }
+//   const result = await menuCollection.updateOne(filter,updatedDoc)
+//   res.send(result)
+// })
 
 
     // Send a ping to confirm a successful connection
