@@ -104,6 +104,10 @@ async function run() {
   // cart collection
   app.post('/cart', async(req,res) =>{
     const cartItem = req.body;
+    const existingCartItem = await cartCollection.findOne({ _id: cartItem._id });
+    if(existingCartItem){
+      return;
+    }
     const result = await cartCollection.insertOne(cartItem);
     res.send(result)
   })
@@ -132,9 +136,9 @@ async function run() {
 
 
     // shop-manager role
-    app.patch('/users/manager/:id', async(req,res) =>{
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id)}
+    app.patch('/users/manager/:email', async(req,res) =>{
+      const email = req.params.email;
+      const filter = { email: email}
       const updatedDoc ={
         $set: {
           role: 'shop-manager'
