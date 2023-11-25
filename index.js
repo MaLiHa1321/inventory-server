@@ -1,6 +1,7 @@
 const express = require('express')
 const app = express()
 const cors = require('cors')
+const jwt = require('jsonwebtoken');
 require('dotenv').config()
 const port = process.env.PORT || 5000
 
@@ -28,13 +29,132 @@ async function run() {
       
     const database = client.db("inventory");
     const shopCollection = database.collection("shop");
+    const userCollection = database.collection("users");
     const productCollection = database.collection("product");
+    const cartCollection = database.collection("cart");
+
+        // middleware
+        // const verifyToken = (req,res,next) =>{
+        //   if(!req?.headers.authorization){
+        //     return res.status(401).send({message: 'Forbidden access'})
+        //   }
+        //   const token = req.headers.authorization.split(' ')[1];
+        //   jwt.verify(token, process.env.ACCESS_TOKEN_KEY, (err, decoded)=>{
+        //     if(err){
+        //       return res.status(401).send({message: 'Forbidden access'})
+        //     }
+        //     req.decoded = decoded;
+        //     next()
+        //   })
+         
+        // }
+    
+        // const verifyAdmin = async(req,res,next) =>{
+        //   const email = req.decoded.email;
+        //   const query = {email: email};
+        //   const user = await userCollection.findOne(query);
+        //   const isAdmin = user?.role === 'admin';
+        //   if(!isAdmin){
+        //     return res.status(403).send({message: 'forbidden access'})
+        //   }
+        //   next();
+        // }
+
+    // user collection
+    app.post('/users', async(req,res) =>{
+      const user = req.body;
+      const query ={email: user.email};
+      const existUser = await userCollection.findOne(query)
+      if(existUser){
+        return res.send({message: 'user already exist', insertedId: null})
+      }
+      const result = await userCollection.insertOne(user)
+      res.send(result);
+    })
+
+
+
+    // 
+    // app.get('/users/admin/:email',  async(req,res) =>{
+    //   const email = req.params.email;
+    //   if(email !== req.decoded.email){
+    //     return res.status(403).send({message: 'Unauthorized access'})
+    //   }
+    //   const query = {email: email};
+    //   const user = await userCollection.findOne(query);
+    //   let admin = false;
+    //   if(user){
+    //     admin = user?.role === 'admin';
+    //   }
+    //   res.send({admin});
+    // })
+
+    app.get('/users/all', async(req,res)=>{
+      const result = await userCollection.find().toArray()
+    res.send(result);
+    })
+
+    app.get('/users',  async(req,res) =>{
+       const email = req.query.email;
+       const query ={email: email}
+      const result = await userCollection.find(query).toArray();
+      res.send(result)
+    })
+
+  // cart collection
+  app.post('/cart', async(req,res) =>{
+    const cartItem = req.body;
+    const result = await cartCollection.insertOne(cartItem);
+    res.send(result)
+  })
+
+  app.get('/cart',async(req,res)=>{
+    const email = req.query.email;
+    const query ={email: email}
+    const result = await cartCollection.find(query).toArray();
+    res.send(result)
+  })
+
+    // admin role
+    // app.patch('/users/admin/:id',   async(req,res) =>{
+    //   const id = req.params.id;
+    //   const filter ={_id: new ObjectId(id)}
+    //   const updatedDoc ={
+    //     $set: {
+    //       role: 'admin'
+    //     }
+    //   }
+    //   const result = await userCollection.updateOne(filter,updatedDoc)
+    //   res.send(result)
+
+    // } )
+
+
+
+    // shop-manager role
+    app.patch('/users/manager/:id', async(req,res) =>{
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id)}
+      const updatedDoc ={
+        $set: {
+          role: 'shop-manager'
+        }
+      }
+      const result = await userCollection.updateOne(filter,updatedDoc)
+      res.send(result)
+    })
 
     // insert a shop to database
     app.post('/shop', async(req,res) =>{
         const shopItem = req.body;
         const result = await shopCollection.insertOne(shopItem)
         res.send(result)
+    })
+     app.get('/shop/all', async(req,res) =>{
+      const result = await shopCollection.find().toArray();
+    
+     res.send(result);
+      
     })
 
     // get the shop from a user
@@ -45,6 +165,8 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result)
     })
+
+   
 
     // insert product to database
     app.post('/product', async(req,res) =>{
@@ -59,6 +181,12 @@ async function run() {
       else{
         return res.status(403).send({err0r: "user Product limit exceeded"})
       }
+    })
+
+    // get all product
+    app.get('/product/all', async(req,res) =>{
+      const result = await productCollection.find().toArray();
+      res.send(result)
     })
 
     // get the product from database
@@ -108,30 +236,16 @@ app.patch('/product/:id', async(req,res) =>{
   res.send(result)
 })
 
+// token generate
+app.post('/jwt', async(req,res) =>{
+  const user = req.body;
+  const token = jwt.sign(user, process.env.ACCESS_TOKEN_KEY, {expiresIn: '10h'})
+  res.send({token})
+})
 
-// update item
-// app.get('/menu/:id', async(req,res) =>{
-//   const id = req.params.id;
-//   const query ={ _id: new ObjectId(id)}
-//   const result = await menuCollection.findOne(query)
-//   res.send(result)
-// })
 
-// app.patch('/menu/:id', async(req,res) =>{
-//   const item = req.body;
-//   const id = req.params.id;
-//   const filter = {_id: new ObjectId(id)}
-//   const updatedDoc ={
-//     $set: {
-//       name: item.name,
-//       category: item.category,
-//       price: item.recipe,
-//       image: item.image
-//     }
-//   }
-//   const result = await menuCollection.updateOne(filter,updatedDoc)
-//   res.send(result)
-// })
+
+
 
 
     // Send a ping to confirm a successful connection
