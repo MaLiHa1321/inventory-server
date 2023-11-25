@@ -182,7 +182,21 @@ async function run() {
         return res.status(403).send({err0r: "user Product limit exceeded"})
       }
     })
-
+        
+    // checkOut page
+    app.patch('/checkOut', async(req,res) =>{
+      const id = req.query.id;
+      const filter = {_id: new ObjectId(id)}
+      const updateDoc = {
+        $set: { sales: 1 },
+        $inc: { quantity: -1 } // Decrease quantity by 1
+      };
+  
+      const result = await productCollection.updateOne(filter, updateDoc,{ upsert: false });
+      res.send(result)
+      
+    })
+ 
     // get all product
     app.get('/product/all', async(req,res) =>{
       const result = await productCollection.find().toArray();
