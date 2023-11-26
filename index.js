@@ -90,8 +90,25 @@ async function run() {
     // })
 
     app.get('/users/all', async(req,res)=>{
-      const result = await userCollection.find().toArray()
-    res.send(result);
+      const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10; // Set a default limit if not provided
+    const skip = (page - 1) * limit;
+
+    const cursor = userCollection.find().skip(skip).limit(limit);
+    const result = await cursor.toArray();
+
+    // Count total documents
+    const total = await userCollection.countDocuments();
+
+    res.send({
+      total,
+      result,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+    });
+      
+    //   const result = await userCollection.find().toArray()
+    // res.send(result);
     })
 
     app.get('/users',  async(req,res) =>{
@@ -141,7 +158,8 @@ async function run() {
       const filter = { email: email}
       const updatedDoc ={
         $set: {
-          role: 'shop-manager'
+          role: 'shop-manager',
+          shopInfo: req.body,
         }
       }
       const result = await userCollection.updateOne(filter,updatedDoc)
@@ -210,7 +228,8 @@ async function run() {
     // get the product from database
     app.get('/product', async(req,res) =>{
       const email = req.query.email;
-      const query = {email: email};
+      const query = {
+        email: email, };
       const product = await productCollection.estimatedDocumentCount()
       // console.log(product)
       const cursor = productCollection.find(query);
