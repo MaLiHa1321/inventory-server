@@ -3,6 +3,7 @@ const app = express()
 const cors = require('cors')
 const jwt = require('jsonwebtoken');
 require('dotenv').config()
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 5000
 
 app.use(cors())
@@ -32,6 +33,8 @@ async function run() {
     const userCollection = database.collection("users");
     const productCollection = database.collection("product");
     const cartCollection = database.collection("cart");
+    const premiumCollection = database.collection("premium");
+    const paymentCollection = database.collection("payment");
 
         // middleware
         // const verifyToken = (req,res,next) =>{
@@ -72,6 +75,71 @@ async function run() {
       res.send(result);
     })
 
+    // premuim data
+    app.get('/premium', async(req,res) =>{
+      const result = await premiumCollection.find().toArray()
+      res.send(result);
+    })
+    app.get('/premium/:id', async(req,res) =>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)}
+      const result = await premiumCollection.findOne(query)
+      res.send(result);
+    })
+
+    // payment intent
+    app.post('/create-payment-intent', async(req,res)=>{
+       const { amount, email } = req.body;
+       const total = parseInt(amount * 100)
+       const paymentIntent = await stripe.paymentIntents.create({
+        amount: total,
+        currency: 'usd',
+        payment_method_types: ['card']
+       })
+
+       let newProductLimit = 0;
+       if(paymentIntent.status === 'succeeded'){
+        console.log('Attempting to find user with email:', email);
+        const user = await userCollection.findOne({email: email});
+
+        console.log('User:', user);
+       
+        if(amount === 10){
+          newProductLimit = user.productLimit + 200;
+
+        }
+        else if(amount === 20){
+          newProductLimit = user.productLimit + 450;
+        }
+        else if(amount === 50){
+          newProductLimit = user.productLimit + 1500;
+        }
+        else{
+          return res.status(400).send({message: 'Invalid amount'});
+        }
+         
+        await shopCollection.updateOne({email: email}, {$set: {productLimit: newProductLimit}})
+  
+
+        const admin = await userCollection.findOne({role: 'admin'});
+        await userCollection.updateOne({role: 'admin'}, {$inc: {income: paymentIntent.amount / 100}});
+
+       }
+        console.log(newProductLimit)
+      
+     
+       res.send({
+        clientSecret: paymentIntent.client_secret
+       })
+    })
+
+
+    // payment realtted api
+    app.post('/payment', async(req,res) =>{
+      const payment = req.body;
+      const result = await paymentCollection.insertOne(payment)
+      res.send(result)
+    })
 
 
     // 
