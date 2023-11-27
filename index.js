@@ -141,6 +141,34 @@ async function run() {
       res.send(result)
     })
 
+    // sales-summary
+    app.get('/admin-stat', async(req,res)=>{
+     
+     const product = await productCollection.estimatedDocumentCount()
+     const sales = await productCollection.estimatedDocumentCount()
+     const users = await userCollection.find({}).toArray();
+     const totalIncome = users.reduce((acc, user) => acc + (user.income || 0), 0);
+
+     res.send({
+      totalIncome, product, sales
+     })
+    })
+
+    // user-summary
+    app.get('/user-stat', async(req,res)=>{
+      const email = req.query.email;
+      const query ={email: email}
+      const result = await productCollection.find(query).toArray();
+      const totalSale = result.reduce((acc, product) => acc + (product.sales || 0), 0);
+      const totalProfit = result.reduce((acc, product) => acc + (product.profit || 0), 0);
+      const totalInvest = result.reduce((acc, product) => acc + (product.productCost || 0), 0);
+      res.send({
+        totalSale,totalProfit,totalInvest
+      })
+
+      
+    })
+
 
     // 
     // app.get('/users/admin/:email',  async(req,res) =>{
