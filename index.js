@@ -159,9 +159,9 @@ async function run() {
       const email = req.query.email;
       const query ={email: email}
       const result = await productCollection.find(query).toArray();
-      const totalSale = result.reduce((acc, product) => acc + (product.sales || 0), 0);
-      const totalProfit = result.reduce((acc, product) => acc + (product.profit || 0), 0);
-      const totalInvest = result.reduce((acc, product) => acc + (product.productCost || 0), 0);
+      const totalSale = result.reduce((acc, product) => acc + parseInt(product.sales?.$numberInt || product.sales, 10) || 0, 0);
+      const totalProfit = result.reduce((acc, product) => acc + parseFloat(product.profit?.$numberInt || product.profit, 10) || 0, 0);
+      const totalInvest = result.reduce((acc, product) => acc +  parseInt(product.productCost?.$numberInt || product.productCost, 10) || 0, 0);
       res.send({
         totalSale,totalProfit,totalInvest
       })
@@ -302,8 +302,9 @@ async function run() {
     })
         
     // checkOut page
-    app.patch('/checkOut', async(req,res) =>{
-      const id = req.query.id;
+    app.patch('/checkOut/:id', async(req,res) =>{
+      
+      const id = req.params.id;
       const filter = {_id: new ObjectId(id)}
       const updateDoc = {
         $set: { sales: 1 },
