@@ -264,9 +264,18 @@ async function run() {
 
     // insert a shop to database
     app.post('/shop', async(req,res) =>{
-        const shopItem = req.body;
-        const result = await shopCollection.insertOne(shopItem)
-        res.send(result)
+      const userEmail = req.query.email;
+
+  // Check if the user already has a shop
+  const existingShop = await shopCollection.findOne({ email: userEmail });
+  if (existingShop) {
+    return res.status(403).send({ error: "User already has a shop" });
+  }
+
+  const shopItem = req.body;
+  const result = await shopCollection.insertOne(shopItem);
+  res.send(result);
+    
     })
      app.get('/shop/all', async(req,res) =>{
       const result = await shopCollection.find().toArray();
