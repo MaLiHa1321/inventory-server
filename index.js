@@ -358,6 +358,8 @@ app.get('/product/:id', async(req,res) =>{
   const result = await productCollection.findOne(query);
   res.send(result);
 })
+
+// update a product content
 app.patch('/product/:id', async(req,res) =>{
   const item = req.body;
   const id = req.params.id;
